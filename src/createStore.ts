@@ -83,6 +83,7 @@ export default function createStore<
     preloadedState = undefined
   }
 
+  // enhancer 是有效的
   if (typeof enhancer !== 'undefined') {
     if (typeof enhancer !== 'function') {
       throw new Error('Expected the enhancer to be a function.')
@@ -98,10 +99,10 @@ export default function createStore<
     throw new Error('Expected the reducer to be a function.')
   }
 
-  let currentReducer = reducer
-  let currentState = preloadedState as S
-  let currentListeners: (() => void)[] | null = []
-  let nextListeners = currentListeners
+  let currentReducer = reducer // 当前store中的reducer
+  let currentState = preloadedState as S // 当前store中存储的状态
+  let currentListeners: (() => void)[] | null = [] // 当前store中放置的监听函数
+  let nextListeners = currentListeners // 下一次dispatch时的监听函数
   let isDispatching = false
 
   /**
@@ -119,6 +120,7 @@ export default function createStore<
 
   /**
    * Reads the state tree managed by the store.
+   * 获取state
    *
    * @returns The current state tree of your application.
    */
@@ -153,7 +155,7 @@ export default function createStore<
    * the listener is called. It is, however, guaranteed that all subscribers
    * registered before the `dispatch()` started will be called with the latest
    * state by the time it exits.
-   *
+   * 添加一个监听函数，每当dispatch被调用的时候都会执行这个监听函数
    * @param listener A callback to be invoked on every dispatch.
    * @returns A function to remove this change listener.
    */
@@ -171,14 +173,16 @@ export default function createStore<
       )
     }
 
+    // 设置一个标志，标志该监听器已经订阅了
     let isSubscribed = true
 
     ensureCanMutateNextListeners()
+    // 添加到监听函数数组，下一次dispatch才会生效的数组
     nextListeners.push(listener)
-
+    // 返回取消订阅的函数，即从数组中删除该监听函数
     return function unsubscribe() {
       if (!isSubscribed) {
-        return
+        return // 如果已经取消订阅过了，直接返回
       }
 
       if (isDispatching) {
@@ -191,6 +195,7 @@ export default function createStore<
       isSubscribed = false
 
       ensureCanMutateNextListeners()
+      // 从下一轮的监听函数数组中删除这个监听器
       const index = nextListeners.indexOf(listener)
       nextListeners.splice(index, 1)
       currentListeners = null
@@ -243,11 +248,12 @@ export default function createStore<
 
     try {
       isDispatching = true
+      // 调用reducer，得到新state
       currentState = currentReducer(currentState, action)
     } finally {
       isDispatching = false
     }
-
+    // 更新监听数组
     const listeners = (currentListeners = nextListeners)
     for (let i = 0; i < listeners.length; i++) {
       const listener = listeners[i]

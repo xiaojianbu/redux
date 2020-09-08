@@ -44,14 +44,15 @@ export default function compose<R>(
 export default function compose<R>(...funcs: Function[]): (...args: any[]) => R
 
 export default function compose(...funcs: Function[]) {
+  // 当未传入函数时，返回一个函数：arg => arg
   if (funcs.length === 0) {
     // infer the argument type so it is usable in inference down the line
     return <T>(arg: T) => arg
   }
-
+  // 当只传入一个函数时，直接返回这个函数
   if (funcs.length === 1) {
     return funcs[0]
   }
-
+  // 返回组合后的函数
   return funcs.reduce((a, b) => (...args: any) => a(b(...args)))
 }

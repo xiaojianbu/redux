@@ -60,25 +60,35 @@ export default function applyMiddleware<Ext, S = any>(
 export default function applyMiddleware(
   ...middlewares: Middleware[]
 ): StoreEnhancer<any> {
+  // 返回一个函数A，函数A的参数是一个createStore函数
+  // 函数A的返回值是函数B，是一个加强后的createStore函数
   return (createStore: StoreEnhancerStoreCreator) => <S, A extends AnyAction>(
     reducer: Reducer<S, A>,
     preloadedState?: PreloadedState<S>
   ) => {
+    // 用参数传进来的createStore创建一个Store
     const store = createStore(reducer, preloadedState)
+    // 只对dispatch进行修改
+    // 一个临时的dispatch，避免再修改前调用dispatch
     let dispatch: Dispatch = () => {
       throw new Error(
         'Dispatching while constructing your middleware is not allowed. ' +
           'Other middleware would not be applied to this dispatch.'
       )
     }
-
+    // 将每个中间件与state关联起来
     const middlewareAPI: MiddlewareAPI = {
       getState: store.getState,
       dispatch: (action, ...args) => dispatch(action, ...args)
     }
+    // middlewares 是一个中间件函数数组，中间件函数的返回值是一个改造dispatch的函数
+    // 调用数组中的每一个中间件函数，得到所有改造函数
     const chain = middlewares.map(middleware => middleware(middlewareAPI))
+    // 将改造函数compose成一个函数
+    // 用compose后的函数去改造store中的dispatch
+    // compose(f1,f2,f3)   (...args) => f1(f2(f3(...args)))
     dispatch = compose<typeof dispatch>(...chain)(store.dispatch)
-
+    // 返回store，用改造后的dispatch方法替换store中的dispatch
     return {
       ...store,
       dispatch

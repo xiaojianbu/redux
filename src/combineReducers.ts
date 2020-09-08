@@ -137,8 +137,9 @@ export default function combineReducers<M extends ReducersMapObject>(
   ActionFromReducersMapObject<M>
 >
 export default function combineReducers(reducers: ReducersMapObject) {
+  // 先获取传入reducers对象的所有key
   const reducerKeys = Object.keys(reducers)
-  const finalReducers: ReducersMapObject = {}
+  const finalReducers: ReducersMapObject = {} // 最后真正有效的reducer
   for (let i = 0; i < reducerKeys.length; i++) {
     const key = reducerKeys[i]
 
@@ -161,13 +162,14 @@ export default function combineReducers(reducers: ReducersMapObject) {
     unexpectedKeyCache = {}
   }
 
+  //检查 finalReducers 中的reducer接受一个初始action或一个未知的action时，是否依旧能够返回有效的值
   let shapeAssertionError: Error
   try {
     assertReducerShape(finalReducers)
   } catch (e) {
     shapeAssertionError = e
   }
-
+  // 返回合并后的reducer
   return function combination(
     state: StateFromReducersMapObject<typeof reducers> = {},
     action: AnyAction
@@ -187,19 +189,21 @@ export default function combineReducers(reducers: ReducersMapObject) {
         warning(warningMessage)
       }
     }
-
-    let hasChanged = false
+    // 取得每个子reducer对应的state，与action一起作为参数给每个子reducer执行
+    let hasChanged = false // 标志state是否有变化
     const nextState: StateFromReducersMapObject<typeof reducers> = {}
     for (let i = 0; i < finalReducerKeys.length; i++) {
-      const key = finalReducerKeys[i]
+      const key = finalReducerKeys[i] // 本次循环的子reducer
       const reducer = finalReducers[key]
-      const previousStateForKey = state[key]
-      const nextStateForKey = reducer(previousStateForKey, action)
+      const previousStateForKey = state[key] // 该子reducer对应的旧状态
+      const nextStateForKey = reducer(previousStateForKey, action) // 调用reducer得到新状态
       if (typeof nextStateForKey === 'undefined') {
         const errorMessage = getUndefinedStateErrorMessage(key, action)
         throw new Error(errorMessage)
       }
-      nextState[key] = nextStateForKey
+      nextState[key] = nextStateForKey // 存到总的状态中
+      //就是如果子reducer不能处理该action，那么会返回previousStateForKey
+      //也就是旧状态，当所有状态都没改变时，我们直接返回之前的state就可以了。
       hasChanged = hasChanged || nextStateForKey !== previousStateForKey
     }
     hasChanged =
